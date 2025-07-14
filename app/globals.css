@@ -1,0 +1,156 @@
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* This block makes CSS variables available to Tailwind's theme() function */
+  /* No changes needed here */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* 
+============================================
+Amazon Theme - Light Mode
+============================================
+*/
+:root {
+  --radius: 0.625rem;
+
+  /* Main Colors */
+  --background: oklch(0.98 0 0); /* Off-white for a softer look */
+  --foreground: oklch(0.296 0.026 257.41); /* Amazon Charcoal for text */
+
+  /* Primary (Amazon Orange) */
+  --primary: oklch(0.704 0.191 70.22); /* #FF9900 */
+  --primary-foreground: oklch(100% 0.00011 271.152); /* Dark text on orange for accessibility */
+  --ring: oklch(0.704 0.191 70.22); /* Orange for focus rings */
+  
+  /* Secondary (Amazon Charcoal) */
+  --secondary: oklch(0.296 0.026 257.41); /* #232F3E */
+  --secondary-foreground: oklch(0.99 0 0); /* White text on charcoal */
+
+  /* Components */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.296 0.026 257.41);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.296 0.026 257.41);
+  
+  /* Muted & Accent (Subtle grays) */
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.55 0 0);
+  --accent: oklch(0.96 0 0);
+  --accent-foreground: oklch(0.296 0.026 257.41);
+
+  /* Borders & Inputs */
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+
+  /* Destructive (Red for errors) */
+  --destructive: oklch(0.65 0.245 27.325);
+  
+  /* Sidebar (White theme) */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.296 0.026 257.41);
+  --sidebar-primary: oklch(0.704 0.191 70.22);         /* Amazon Orange */
+  --sidebar-primary-foreground: oklch(0.296 0.026 257.41); /* Dark text on orange */
+  --sidebar-accent: oklch(0.704 0.191 70.22 / 10%);    /* Transparent orange for hover */
+  --sidebar-accent-foreground: oklch(0.704 0.191 70.22); /* Orange text on hover */
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.704 0.191 70.22);
+}
+
+/* 
+============================================
+Amazon Theme - Dark Mode
+============================================
+*/
+.dark {
+  /* Main Colors */
+  --background: oklch(0.20 0.02 257.41); /* Slightly lighter than pure charcoal */
+  --foreground: oklch(0.98 0 0); /* Off-white text */
+
+  /* Primary (Amazon Orange) */
+  --primary: oklch(0.704 0.191 70.22); /* #FF9900 */
+  --primary-foreground: oklch(100% 0.00011 271.152); /* Dark text on orange */
+  --ring: oklch(0.704 0.191 70.22);
+  
+  /* Secondary (Lighter gray for contrast) */
+  --secondary: oklch(0.35 0.02 257.41);
+  --secondary-foreground: oklch(0.98 0 0);
+
+  /* Components */
+  --card: oklch(0.296 0.026 257.41); /* Amazon Charcoal */
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.296 0.026 257.41);
+  --popover-foreground: oklch(0.98 0 0);
+
+  /* Muted & Accent */
+  --muted: oklch(0.35 0.02 257.41);
+  --muted-foreground: oklch(0.70 0 0);
+  --accent: oklch(0.35 0.02 257.41);
+  --accent-foreground: oklch(0.98 0 0);
+  
+  /* Borders & Inputs */
+  --border: oklch(1 0 0 / 15%);
+  --input: oklch(1 0 0 / 15%);
+
+  /* Destructive */
+  --destructive: oklch(0.704 0.191 22.216);
+
+  /* Sidebar (Dark theme) */
+  --sidebar: oklch(0.296 0.026 257.41); /* Amazon Charcoal */
+  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.704 0.191 70.22);         /* Amazon Orange */
+  --sidebar-primary-foreground: oklch(0.296 0.026 257.41);
+  --sidebar-accent: oklch(0.704 0.191 70.22 / 10%);
+  --sidebar-accent-foreground: oklch(0.704 0.191 70.22);
+  --sidebar-border: oklch(1 0 0 / 15%);
+  --sidebar-ring: oklch(0.704 0.191 70.22);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
