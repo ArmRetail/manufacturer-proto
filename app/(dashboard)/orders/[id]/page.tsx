@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import {
   ArrowLeft,
   Package,
@@ -14,6 +15,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  RefreshCcw,
   MapPin,
   Phone,
   Mail,
@@ -22,20 +24,10 @@ import {
   Edit3,
   Save,
   X,
-  Download,
-  Printer,
-  MessageSquare,
+  FileText,
   History,
-  ChevronDown,
+  Copy,
 } from "lucide-react"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import {
   Dialog,
   DialogContent,
@@ -44,22 +36,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 
 // Mock order data
 const mockOrderDetail = {
   orderId: "MFG-ORD-001",
+  builderId: "BLD-2024-0156",
   status: "pending",
   paymentStatus: "unpaid",
   orderDate: "2024-01-15T10:30:00Z",
@@ -77,7 +60,6 @@ const mockOrderDetail = {
     phone: "+977-9841234567",
     email: "ram@rkdistributors.com",
     address: "Thamel, Kathmandu 44600, Bagmati Province",
-    panNumber: "301234567",
     vatNumber: "600123456",
   },
 
@@ -140,30 +122,25 @@ const mockOrderDetail = {
       completed: false,
     },
   ],
-
-  // Internal Notes
-  notes: [
-    {
-      id: "1",
-      author: "Chandan Kumar",
-      date: "2024-01-15T11:00:00Z",
-      content: "Large order from reliable distributor. Priority processing recommended.",
-    },
-  ],
 }
 
 export default function ManufacturerOrderDetail() {
   const [order] = useState(mockOrderDetail)
   const [orderStatus, setOrderStatus] = useState(order.status)
   const [paymentStatus, setPaymentStatus] = useState(order.paymentStatus)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
+  const [showFailedDialog, setShowFailedDialog] = useState(false)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
-  const [isEditingNotes, setIsEditingNotes] = useState(false)
-  const [newNote, setNewNote] = useState("")
-  const [notes, setNotes] = useState(order.notes)
-  const [showStatusUpdateDialog, setShowStatusUpdateDialog] = useState(false)
-  const [statusUpdate, setStatusUpdate] = useState<{ type: "order" | "payment"; value: string } | null>(null)
+  const [failureReason, setFailureReason] = useState("")
+  const [cancellationReason, setCancellationReason] = useState("")
+  const [isEditingQuantity, setIsEditingQuantity] = useState(false)
+  const [editedQuantity, setEditedQuantity] = useState(order.product.quantity)
+  const [originalQuantity] = useState(order.product.quantity)
+  const [quantityEdited, setQuantityEdited] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const router = useRouter()
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -174,9 +151,12 @@ export default function ManufacturerOrderDetail() {
       delivered: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
       cancelled: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
       rejected: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
+      failed: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
     }
+
     const config = statusConfig[status as keyof typeof statusConfig]
     const IconComponent = config.icon
+
     return (
       <Badge className={`${config.color} border font-medium px-3 py-1 text-sm flex items-center gap-2`}>
         <IconComponent className="h-4 w-4" />
@@ -189,9 +169,15 @@ export default function ManufacturerOrderDetail() {
     const statusConfig = {
       paid: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
       unpaid: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
+      refunded: { color: "bg-white text-black border-gray-200", icon: RefreshCcw },
     }
-    const config = statusConfig[paymentStatus as keyof typeof statusConfig]
+
+    const config = statusConfig[paymentStatus as keyof typeof statusConfig] || {
+      color: "bg-gray-100 text-gray-800 border-gray-200",
+      icon: Clock,
+    }
     const IconComponent = config.icon
+
     return (
       <Badge className={`${config.color} border font-medium px-3 py-1 text-sm flex items-center gap-2`}>
         <IconComponent className="h-4 w-4" />
@@ -213,11 +199,27 @@ export default function ManufacturerOrderDetail() {
       minute: "2-digit",
     })
   }
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+  const handleStatusUpdate = (newStatus: string) => {
+    if (newStatus === "rejected") {
+      setShowRejectDialog(true)
+    } else if (newStatus === "failed") {
+      setShowFailedDialog(true)
+    } else if (newStatus === "cancelled") {
+      setShowCancelDialog(true)
+    } else {
+      setOrderStatus(newStatus)
+      // TODO: API call to update status
+    }
+  }
 
-  const handleConfirmOrder = () => {
-    setOrderStatus("processing")
-    setShowConfirmDialog(false)
-    // TODO: API call to confirm order
+  const handlePaymentStatusUpdate = (newStatus: string) => {
+    setPaymentStatus(newStatus)
+    // TODO: API call to update payment status
   }
 
   const handleRejectOrder = () => {
@@ -229,80 +231,207 @@ export default function ManufacturerOrderDetail() {
     }
   }
 
-  const handleStatusSelect = (type: "order" | "payment", value: string) => {
-    setStatusUpdate({ type, value })
-    setShowStatusUpdateDialog(true)
-  }
-
-  const confirmStatusUpdate = () => {
-    if (!statusUpdate) return
-    if (statusUpdate.type === "order") {
-      setOrderStatus(statusUpdate.value)
-    } else {
-      setPaymentStatus(statusUpdate.value)
+  const handleFailOrder = () => {
+    if (failureReason.trim()) {
+      setOrderStatus("failed")
+      setShowFailedDialog(false)
+      setFailureReason("")
+      // TODO: API call to mark order as failed
     }
-    setShowStatusUpdateDialog(false)
-    setStatusUpdate(null)
-    // TODO: API call to update status
   }
 
-  const handleAddNote = () => {
-    if (newNote.trim()) {
-      const note = {
-        id: Date.now().toString(),
-        author: "Chandan Kumar",
-        date: new Date().toISOString(),
-        content: newNote.trim(),
+  const handleCancelOrder = () => {
+    if (cancellationReason.trim()) {
+      setOrderStatus("cancelled")
+      setShowCancelDialog(false)
+      setCancellationReason("")
+      // TODO: API call to cancel order
+    }
+  }
+
+  const handleQuantityEdit = () => {
+    if (editedQuantity !== originalQuantity) {
+      setQuantityEdited(true)
+    }
+    setIsEditingQuantity(false)
+    // TODO: API call to update quantity
+  }
+
+  const handleDeliverySlip = () => {
+    // Create the delivery slip HTML content
+    const deliverySlipHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+ 
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .info-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
+        .info-block h3 { margin-bottom: 10px; font-size: 16px; }
+        .info-block p { margin: 3px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #000; padding: 10px; text-align: left; }
+        th { background-color: #f5f5f5; }
+        .total { text-align: right; font-size: 18px; font-weight: bold; margin: 20px 0; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 50px; }
+        .signature-box { text-align: center; width: 45%; }
+        .signature-line { border-bottom: 1px solid #000; height: 50px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; padding-top: 15px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>DELIVERY SLIP: #${order.orderId}</h1>
+        <p>Wai Wai Manufacturing</p>
+        <p>Industrial Area, Kathmandu, Nepal | Phone: +977-1-4567890</p>
+      </div>
+      
+      <div class="info-section">
+        <div class="info-block">
+          <h3>Deliver To:</h3>
+          <p><strong>${order.distributor.businessName}</strong></p>
+          <p>${order.distributor.ownerName}</p>
+          <p>${order.distributor.address}</p>
+          <p>${order.distributor.phone}</p>
+          <p>${order.distributor.email}</p>
+        </div>
+        
+        <div class="info-block">
+          <h3>Order Details:</h3>
+          <p><strong>Builder ID:</strong> ${order.builderId}</p>
+          <p><strong>Order Date:</strong> ${formatDate(order.orderDate)}</p>
+          <p><strong>VAT Number:</strong> ${order.distributor.vatNumber}</p>
+        </div>
+      </div>
+      
+      <h3>Product Details:</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>SKU</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>${order.product.productName}</strong><br>
+              <small>${order.product.brandName}</small>
+            </td>
+            <td>${order.product.sku}</td>
+            <td>${editedQuantity} cartons</td>
+            <td>${formatCurrency(order.product.unitPrice)}</td>
+            <td><strong>${formatCurrency(totalPrice)}</strong></td>
+          </tr>
+              <tr>
+            <td>
+              <strong>${order.product.productName}</strong><br>
+              <small>${order.product.brandName}</small>
+            </td>
+            <td>${order.product.sku}</td>
+            <td>${editedQuantity} cartons</td>
+            <td>${formatCurrency(order.product.unitPrice)}</td>
+            <td><strong>${formatCurrency(totalPrice)}</strong></td>
+          </tr>
+          
+        </tbody>
+      </table>
+      
+      <div class="total">
+        Total Amount: ${formatCurrency(totalPrice)}
+      </div>
+      
+      <div class="signatures">
+        <div class="signature-box">
+          <h4>Authorized Signature</h4>
+          <div class="signature-line"></div>
+          <p>Manufacturer Representative</p>
+        </div>
+        
+        <div class="signature-box">
+          <h4>Received By</h4>
+          <div class="signature-line"></div>
+          <p>Distributor Representative</p>
+        </div>
+      </div>
+      
+      <div class="footer">
+     
+        <p><strong>Powered by ArmRetail</strong></p>
+      </div>
+    </body>
+    </html>
+  `
+
+    // Create a new window and write the content
+    const printWindow = window.open("", "_blank")
+    if (printWindow) {
+      printWindow.document.write(deliverySlipHTML)
+      printWindow.document.close()
+
+      // Wait for the content to load, then print
+      printWindow.onload = () => {
+        printWindow.print()
+        printWindow.close()
       }
-      setNotes([...notes, note])
-      setNewNote("")
-      setIsEditingNotes(false)
     }
+  }
+
+  const printDeliverySlip = () => {
+    window.print()
   }
 
   const goBack = () => {
-    router.push('/orders')
+    router.push("/orders")
   }
 
   const orderStatusOptions = {
-    processing: ["packaged", "shipped", "cancelled"],
-    packaged: ["shipped", "cancelled"],
-    shipped: ["delivered"],
+    pending: ["processing", "rejected", "cancelled"],
+    processing: ["packaged", "failed", "cancelled"],
+    packaged: ["shipped", "failed", "cancelled"],
+    shipped: ["delivered", "failed"],
     rejected: ["pending", "processing"],
+    failed: ["processing", "packaged"],
+    cancelled: ["pending", "processing"],
   }
 
-  const router = useRouter();
+  const paymentStatusOptions = ["paid", "unpaid", "refunded"]
+
+  const totalPrice = editedQuantity * order.product.unitPrice
+
   return (
     <>
       {/* Header */}
-      <header className="flex h-16 shrink-0 items-center gap-4 border-b bg-white px-6 shadow-sm">
-        {/* Breadcrumb */}
-        <div className="flex items-center">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href="/manufacturer/dashboard"
-                  className="text-gray-600 hover:text-orange-600 transition-colors font-medium"
-                >
-                  Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href="/manufacturer/orders"
-                  className="text-gray-600 hover:text-orange-600 transition-colors font-medium"
-                >
-                  Orders
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-gray-900 font-semibold">{order.orderId}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+      <header className="flex h-16 shrink-0 items-center gap-4 justify-between border-b bg-white px-6 shadow-sm">
+        <div className="flex flex-row -ml-5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goBack}
+            className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 transition-colors p-2"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Order {order.orderId}</h1>
+            <p className="text-sm text-gray-600">Builder ID: {order.builderId}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleDeliverySlip}
+            variant="outline"
+            size="sm"
+            className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Delivery Slip
+          </Button>
         </div>
       </header>
 
@@ -312,40 +441,7 @@ export default function ManufacturerOrderDetail() {
           <div className="p-6 space-y-6">
             {/* Page Header */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={goBack}
-                  className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 transition-colors p-2"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Order {order.orderId}</h1>
-                  <p className="text-gray-600 mt-1">
-                    Placed on {formatDate(order.orderDate)} by {order.distributor.name}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
-              </div>
+              <div></div>
             </div>
 
             {/* Status and Actions */}
@@ -358,64 +454,46 @@ export default function ManufacturerOrderDetail() {
                         <p className="text-sm font-medium text-gray-600 mb-2">Order Status</p>
                         <div className="flex items-center gap-2">
                           {getStatusBadge(orderStatus)}
-                          {orderStatus !== "pending" && orderStatus !== "delivered" && orderStatus !== "cancelled" && (
-                            <Select onValueChange={(value) => handleStatusSelect("order", value)} value="">
-                              <SelectTrigger className="w-32 h-8 text-xs">
-                                <SelectValue placeholder="Update..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(orderStatusOptions[orderStatus as keyof typeof orderStatusOptions] || []).map(
-                                  (status) => (
-                                    <SelectItem key={status} value={status}>
-                                      Mark as {status.charAt(0).toUpperCase() + status.slice(1)}
-                                    </SelectItem>
-                                  ),
-                                )}
-                              </SelectContent>
-                            </Select>
-                          )}
+                          <Select onValueChange={handleStatusUpdate} value="">
+                            <SelectTrigger className="w-32 h-8 text-xs">
+                              <SelectValue placeholder="Update..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(orderStatusOptions[orderStatus as keyof typeof orderStatusOptions] || []).map(
+                                (status) => (
+                                  <SelectItem key={status} value={status}>
+                                    Mark as {status.charAt(0).toUpperCase() + status.slice(1)}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600 mb-2">Payment Status</p>
                         <div className="flex items-center gap-2">
                           {getPaymentStatusBadge(paymentStatus)}
-                          <Select onValueChange={(value) => handleStatusSelect("payment", value)} value="">
+                          <Select onValueChange={handlePaymentStatusUpdate} value="">
                             <SelectTrigger className="w-32 h-8 text-xs">
                               <SelectValue placeholder="Update..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="paid">Mark as Paid</SelectItem>
-                              <SelectItem value="unpaid">Mark as Unpaid</SelectItem>
+                              {paymentStatusOptions.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  Mark as {status.charAt(0).toUpperCase() + status.slice(1)}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600 mb-2">Total Amount</p>
-                        <p className="text-xl font-bold text-gray-900">{formatCurrency(order.product.totalPrice)}</p>
+                        <p className="text-xl font-bold text-gray-900">{formatCurrency(totalPrice)}</p>
                       </div>
                     </div>
                   </div>
-                  {orderStatus === "pending" && (
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => setShowRejectDialog(true)}
-                        variant="outline"
-                        className="border-red-300 text-red-600 hover:bg-red-50 bg-transparent"
-                      >
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Reject Order
-                      </Button>
-                      <Button
-                        onClick={() => setShowConfirmDialog(true)}
-                        className="bg-green-500 hover:bg-green-600 text-white"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Confirm Order
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -441,11 +519,68 @@ export default function ManufacturerOrderDetail() {
                       <div className="flex-1">
                         <div className="text-sm font-medium text-orange-600 mb-1">{order.product.brandName}</div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">{order.product.productName}</h3>
-                        <div className="text-sm text-gray-600 mb-3">SKU: {order.product.sku}</div>
+                        <div className="text-sm text-gray-600 mb-3">SKU: {order.product.sku}
+                             <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-4 w-4 ml-2"
+                                                            onClick={() => copyToClipboard(order.orderId, `sku-${order.orderId}`)}
+                                                          >
+                                                            <span className="sr-only">Copy SKU</span>
+                                                            {copiedId === `sku-${order.orderId}` ? (
+                                                              <CheckCircle className="h-3 w-3 text-green-500" />
+                                                            ) : (
+                                                              <Copy className="h-3 w-3" />
+                                                            )}
+                                                          </Button>
+                        </div>
                         <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
+                          <div className="flex flex-row items-center gap-2">
                             <span className="text-gray-600">Quantity:</span>
-                            <span className="font-semibold text-gray-900 ml-2">{order.product.quantity} cartons</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              {isEditingQuantity ? (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    value={editedQuantity}
+                                    onChange={(e) => setEditedQuantity(Number.parseInt(e.target.value) || 0)}
+                                    className="w-20 h-8 text-sm"
+                                    min="1"
+                                  />
+                                  <Button size="sm" onClick={handleQuantityEdit} className="h-8 px-2">
+                                    <Save className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setIsEditingQuantity(false)
+                                      setEditedQuantity(order.product.quantity)
+                                    }}
+                                    className="h-8 px-2"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-gray-900">{editedQuantity} cartons</span>
+                                  {quantityEdited && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Edited
+                                    </Badge>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setIsEditingQuantity(true)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Edit3 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div>
                             <span className="text-gray-600">Unit Price:</span>
@@ -457,14 +592,11 @@ export default function ManufacturerOrderDetail() {
                       </div>
                     </div>
                     <Separator />
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 mb-2">Packing Details</p>
-                      <p className="text-sm text-gray-700">{order.product.packingDetails}</p>
-                    </div>
+                   
                     <div className="bg-gray-50 rounded-lg p-4">
                       <div className="flex justify-between items-center text-lg font-semibold">
                         <span>Total Amount:</span>
-                        <span className="text-orange-600">{formatCurrency(order.product.totalPrice)}</span>
+                        <span className="text-orange-600">{formatCurrency(totalPrice)}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -493,10 +625,8 @@ export default function ManufacturerOrderDetail() {
                           >
                             {step.completed ? (
                               <CheckCircle className="h-4 w-4" />
-                            ) : step.current ? (
-                              <Clock className="h-4 w-4" />
                             ) : (
-                              <div className="w-2 h-2 bg-current rounded-full" />
+                              <Clock className="h-4 w-4" />
                             )}
                           </div>
                           <div className="flex-1">
@@ -531,7 +661,7 @@ export default function ManufacturerOrderDetail() {
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-2">Delivery Address</p>
                       <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <MapPin className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                         <p className="text-sm text-gray-700">{order.delivery.address}</p>
                       </div>
                     </div>
@@ -558,7 +688,7 @@ export default function ManufacturerOrderDetail() {
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-1">Owner</p>
                       <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-gray-400" />
+                        <User className="h-4 w-4 text-orange-600" />
                         <p className="text-sm text-gray-900">{order.distributor.ownerName}</p>
                       </div>
                     </div>
@@ -566,134 +696,28 @@ export default function ManufacturerOrderDetail() {
                       <p className="text-sm font-medium text-gray-600 mb-1">Contact</p>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
+                          <Phone className="h-4 w-4 text-orange-600" />
                           <p className="text-sm text-gray-900">{order.distributor.phone}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-gray-400" />
+                          <Mail className="h-4 w-4 text-orange-600" />
                           <p className="text-sm text-gray-900">{order.distributor.email}</p>
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 mb-1">Address</p>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-900">{order.distributor.address}</p>
-                      </div>
-                    </div>
+                  
                     <Separator />
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-600">PAN:</p>
-                        <p className="font-medium text-gray-900">{order.distributor.panNumber}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">VAT:</p>
-                        <p className="font-medium text-gray-900">{order.distributor.vatNumber}</p>
-                      </div>
+                    <div>
+                      <p className="text-gray-600 text-sm">VAT Number:</p>
+                      <p className="font-medium text-orange-600">{order.distributor.vatNumber}</p>
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Internal Notes */}
-                {/* <Card className="shadow-sm border-gray-200 bg-white">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-5 w-5 text-orange-600" />
-                        Internal Notes
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsEditingNotes(true)}
-                        className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
-                      >
-                        <Edit3 className="h-4 w-4 mr-1" />
-                        Add Note
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {notes.map((note) => (
-                      <div key={note.id} className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-medium text-gray-900">{note.author}</p>
-                          <p className="text-xs text-gray-500">{formatDate(note.date)}</p>
-                        </div>
-                        <p className="text-sm text-gray-700">{note.content}</p>
-                      </div>
-                    ))}
-                    {isEditingNotes && (
-                      <div className="space-y-3">
-                        <Textarea
-                          placeholder="Add your note here..."
-                          value={newNote}
-                          onChange={(e) => setNewNote(e.target.value)}
-                          className="border-gray-300 focus:border-orange-500 focus:ring-orange-500"
-                          rows={3}
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={handleAddNote}
-                            className="bg-orange-500 hover:bg-orange-600 text-white"
-                          >
-                            <Save className="h-4 w-4 mr-1" />
-                            Save Note
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setIsEditingNotes(false)
-                              setNewNote("")
-                            }}
-                            className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card> */}
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Confirm Order Dialog */}
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent className="bg-white max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-green-600 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              Confirm Order
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600">
-              Are you sure you want to confirm order{" "}
-              <span className="font-semibold text-gray-900">{order.orderId}</span>? This will move the order to
-              processing status.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmOrder}
-              className="bg-green-500 hover:bg-green-600 text-white font-medium"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Confirm Order
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Reject Order Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
@@ -741,36 +765,97 @@ export default function ManufacturerOrderDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Status Update Confirmation Dialog */}
-      <AlertDialog open={showStatusUpdateDialog} onOpenChange={setShowStatusUpdateDialog}>
-        <AlertDialogContent className="bg-white max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-orange-600 flex items-center gap-2">
-              <ChevronDown className="h-5 w-5" />
-              Confirm Status Change
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600">
-              Are you sure you want to update the {statusUpdate?.type} status to{" "}
-              <span className="font-semibold text-gray-900">{statusUpdate?.value}</span>?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel
-              onClick={() => setShowStatusUpdateDialog(false)}
+      {/* Failed Order Dialog */}
+      <Dialog open={showFailedDialog} onOpenChange={setShowFailedDialog}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-600 flex items-center gap-2">
+              <XCircle className="h-5 w-5" />
+              Mark Order as Failed
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Please provide a reason for marking order{" "}
+              <span className="font-semibold text-gray-900">{order.orderId}</span> as failed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label className="block text-sm font-medium text-gray-700 mb-2">
+              Failure Reason <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              placeholder="Please explain why this order failed..."
+              value={failureReason}
+              onChange={(e) => setFailureReason(e.target.value)}
+              className="border-gray-300 focus:border-red-500 focus:ring-red-500"
+              rows={4}
+              required
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowFailedDialog(false)}
               className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
             >
               Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmStatusUpdate}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
+            </Button>
+            <Button
+              onClick={handleFailOrder}
+              disabled={!failureReason.trim()}
+              className="bg-red-500 hover:bg-red-600 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Confirm Update
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <XCircle className="h-4 w-4 mr-2" />
+              Mark as Failed
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Order Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-600 flex items-center gap-2">
+              <XCircle className="h-5 w-5" />
+              Cancel Order
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Please provide a reason for cancelling order{" "}
+              <span className="font-semibold text-gray-900">{order.orderId}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label className="block text-sm font-medium text-gray-700 mb-2">
+              Cancellation Reason <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              placeholder="Please explain why this order is being cancelled..."
+              value={cancellationReason}
+              onChange={(e) => setCancellationReason(e.target.value)}
+              className="border-gray-300 focus:border-red-500 focus:ring-red-500"
+              rows={4}
+              required
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowCancelDialog(false)}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCancelOrder}
+              disabled={!cancellationReason.trim()}
+              className="bg-red-500 hover:bg-red-600 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Cancel Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

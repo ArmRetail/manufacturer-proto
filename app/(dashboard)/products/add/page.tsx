@@ -241,11 +241,12 @@ export default function AddProductPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files) {
-      const newImages = Array.from(files).map((file) => {
+      const newImages = Array.from(files).map((file, index) => {
         const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
         const preview = URL.createObjectURL(file)
-        // First image is primary by default, others are not
-        const isPrimary = images.length === 0 && newImages.length === 0
+        // FIX: Check against existing images `images.length` and current `index`
+        // to determine if the new image should be primary.
+        const isPrimary = images.length === 0 && index === 0
         return { id, file, preview, isPrimary }
       })
       setImages((prev) => [...prev, ...newImages])
@@ -804,33 +805,35 @@ export default function AddProductPage() {
                     />
                   </div>
 
-                  <ScrollArea className="h-96 pr-3">
-                    {/* Wholesale Pricing Tiers */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium text-gray-900">Wholesale Pricing Tiers *</h4>
-                          <p className="text-xs text-gray-500">Visible to distributors for setting their own prices.</p>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs !text-black">
-                            This pricing is visible to distributors. They can use this as a base to set their own pricing
-                            structure.
-                          </TooltipContent>
-                        </Tooltip>
+                  {/* FIX: Separated Wholesale and Brand pricing into their own sections and ScrollAreas */}
+
+                  {/* Wholesale Pricing Tiers */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-900">Wholesale Pricing Tiers *</h4>
+                        <p className="text-xs text-gray-500">Visible to distributors for setting their own prices.</p>
                       </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs !text-black">
+                          This pricing is visible to distributors. They can use this as a base to set their own pricing
+                          structure.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <ScrollArea className="h-56 pr-3">
                       <div className="grid grid-cols-10 gap-2 text-xs font-medium text-gray-500 px-2">
                         <div className="col-span-3">Min Qty</div>
                         <div className="col-span-3">Max Qty</div>
                         <div className="col-span-3">Price/Unit</div>
                       </div>
                       {wholesalePricingTiers.map((tier) => (
-                        <div key={tier.id} className="grid grid-cols-10 gap-2 items-center">
+                        <div key={tier.id} className="grid grid-cols-10 gap-2 items-center mt-2">
                           <Input
                             type="number"
                             placeholder="Min"
@@ -878,31 +881,33 @@ export default function AddProductPage() {
                           )}
                         </div>
                       ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={addWholesalePricingTier}
-                        className="w-full border-dashed text-orange-600 border-orange-600 border-1"
-                      >
-                        <Plus className="h-4 w-4 mr-2" /> Add Wholesale Tier
-                      </Button>
+                    </ScrollArea>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addWholesalePricingTier}
+                      className="w-full border-dashed text-orange-600 border-orange-600 border-1 mt-2"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Add Wholesale Tier
+                    </Button>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  {/* Brand Pricing Tiers */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Brand Pricing Tiers *</h4>
+                      <p className="text-xs text-gray-500">This is the direct pricing from the brand to distributor.</p>
                     </div>
-
-                    <Separator className="my-6" />
-
-                    {/* Brand Pricing Tiers */}
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium text-gray-900">Brand Pricing Tiers *</h4>
-                        <p className="text-xs text-gray-500">This is the direct pricing from the brand to customers.</p>
-                      </div>
+                    <ScrollArea className="h-56 pr-3">
                       <div className="grid grid-cols-10 gap-2 text-xs font-medium text-gray-500 px-2">
                         <div className="col-span-3">Min Qty</div>
                         <div className="col-span-3">Max Qty</div>
                         <div className="col-span-3">Price/Unit</div>
                       </div>
                       {retailerPricingTiers.map((tier) => (
-                        <div key={tier.id} className="grid grid-cols-10 gap-2 items-center">
+                        <div key={tier.id} className="grid grid-cols-10 gap-2 items-center mt-2">
                           <Input
                             type="number"
                             placeholder="Min"
@@ -950,16 +955,16 @@ export default function AddProductPage() {
                           )}
                         </div>
                       ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={addRetailerPricingTier}
-                        className="w-full border-dashed text-orange-600 border-orange-600 border-1"
-                      >
-                        <Plus className="h-4 w-4 mr-2" /> Add Brand Tier
-                      </Button>
-                    </div>
-                  </ScrollArea>
+                    </ScrollArea>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addRetailerPricingTier}
+                      className="w-full border-dashed text-orange-600 border-orange-600 border-1 mt-2"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Add Brand Tier
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1049,7 +1054,7 @@ export default function AddProductPage() {
                       <div key={level} className="w-1/5 border-r flex flex-col">
                         <ScrollArea className="flex-1 p-1">
                           {getCategoriesAtLevel(level).map((category) => (
-                            <Tooltip key={category.key} content={category.name}>
+                            <Tooltip key={category.key}>
                               <TooltipTrigger asChild>
                                 <div
                                   onClick={() => handleCategoryClick(category.key, level)}
@@ -1058,12 +1063,13 @@ export default function AddProductPage() {
                                       ? "bg-orange-50 text-orange-600"
                                       : "hover:bg-gray-100"
                                   }`}
-                                  title={category.name}
+                               
                                 >
                                   <span className="truncate">{category.name}</span>
                                   {category.hasChildren && <ChevronRight className="h-3 w-3" />}
                                 </div>
                               </TooltipTrigger>
+                              <TooltipContent>{category.name}</TooltipContent>
                             </Tooltip>
                           ))}
                         </ScrollArea>

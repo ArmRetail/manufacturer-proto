@@ -17,6 +17,7 @@ import {
   FileText,
   Receipt,
   LogOut,
+  Percent
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -38,6 +39,7 @@ const getSidebarConfig = (pendingOrders, newQuotes) => ({
   ],
   growthNav: [
     { label: "Analytics", icon: BarChart2, href: "/analytics" },
+     { label: "Rebate", icon: Percent, href: "/rebate" },
     { label: "Promotions", icon: Megaphone, href: "/promotions" },
   ],
   footerNav: [

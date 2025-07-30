@@ -3,16 +3,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ArrowLeft, Download, ChevronDown, FileText, HelpCircle } from "lucide-react"
+import { ArrowLeft, HelpCircle } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import Link from "next/link"
+import { useState } from "react"
 
 // Mock statement data
 const statementData = {
   statementId: "ARMRET001H-2024-044",
   period: "01 Jul 2024 - 31 Jul 2024",
-  paymentStatus: "paid", // or "unpaid"
+  paymentStatus: "paid",
   paymentDate: "10 Aug 2024",
   totalSales: 835000,
   platformCommission: 50100, // 6% of sales
@@ -21,7 +30,32 @@ const statementData = {
   totalOrders: 156,
 }
 
+// Mock order data with product details
+const mockOrders = Array.from({ length: 156 }, (_, i) => ({
+  id: `ORD-${String(i + 1).padStart(4, "0")}`,
+  date: new Date(2024, 6, Math.floor(Math.random() * 31) + 1).toLocaleDateString("en-GB"),
+  retailer: `Himalayan Sunrise Retailers only for you ${i + 1}`,
+  panNo: `PAN${String(i + 1).padStart(6, "0")}`,
+  productName:
+    i % 3 === 0
+      ? `Premium Quality Organic Basmati Rice Extra Long Grain Premium Pack`
+      : i % 3 === 1
+        ? `Smartphone Case`
+        : `Wireless Headphones`,
+  quantity: Math.floor(Math.random() * 5) + 1,
+  amount: Math.floor(Math.random() * 10000) + 1000,
+  status: "Delivered",
+}))
+
 export default function StatementDetailPage() {
+  const [currentPage, setCurrentPage] = useState(1)
+  const ordersPerPage = 10
+  const totalPages = Math.ceil(mockOrders.length / ordersPerPage)
+
+  const startIndex = (currentPage - 1) * ordersPerPage
+  const endIndex = startIndex + ordersPerPage
+  const currentOrders = mockOrders.slice(startIndex, endIndex)
+
   const formatCurrency = (amount: number) => {
     return `NPR ${amount.toLocaleString()}`
   }
@@ -34,14 +68,9 @@ export default function StatementDetailPage() {
     }
   }
 
-  const handleViewOrderBreakdown = () => {
-    // Extract dates from period for URL parameters
-    const [startDate, endDate] = statementData.period.split(" - ")
-    const formattedStartDate = new Date(startDate).toISOString().split("T")[0]
-    const formattedEndDate = new Date(endDate).toISOString().split("T")[0]
-
-    // Redirect to orders page with date range
-    window.location.href = `/orders`
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + "..."
   }
 
   return (
@@ -58,26 +87,6 @@ export default function StatementDetailPage() {
                 </Button>
               </Link>
             </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="bg-white border-orange-300 text-orange-600 ">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                  <ChevronDown className="h-4 w-4 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Download PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Download CSV
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           {/* Statement Overview */}
@@ -147,14 +156,18 @@ export default function StatementDetailPage() {
                 {/* Platform Commission */}
                 <div className="grid grid-cols-2 gap-4 py-3 text-sm border-b border-gray-100">
                   <div className="text-gray-700">Platform Commission (6%)</div>
-                  <div className="text-right font-medium">{formatCurrency(statementData.platformCommission)}</div>
+                  <div className="text-right font-medium text-red-600">
+                    -{formatCurrency(statementData.platformCommission)}
+                  </div>
                 </div>
 
                 {/* Other Deductions (if any) */}
                 {statementData.otherDeductions > 0 && (
                   <div className="grid grid-cols-2 gap-4 py-3 text-sm border-b border-gray-100">
                     <div className="text-gray-700">Other Deductions</div>
-                    <div className="text-right font-medium">{formatCurrency(statementData.otherDeductions)}</div>
+                    <div className="text-right font-medium text-red-600">
+                      -{formatCurrency(statementData.otherDeductions)}
+                    </div>
                   </div>
                 )}
 
@@ -167,34 +180,176 @@ export default function StatementDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Statement Detail */}
+          {/* Order Details */}
           <Card className="bg-white border border-gray-200">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-lg font-medium text-gray-700">Statement Detail</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Detailed breakdown of orders included in this statement</p>
-                  </TooltipContent>
-                </Tooltip>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg font-medium text-gray-700">Order Details</CardTitle>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Detailed breakdown of all orders included in this statement</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Showing {startIndex + 1}-{Math.min(endIndex, mockOrders.length)} of {mockOrders.length} orders
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <div className="mb-4">
-                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">View Order Details</h3>
-                  <p className="text-gray-600 mb-6">
-                    This statement includes {statementData.totalOrders} orders from the period{" "}
-                    <span className="font-medium">{statementData.period}</span>
-                  </p>
-                </div>
-                <Button onClick={handleViewOrderBreakdown} className="bg-orange-600 hover:bg-orange-700 text-white px-6">
-                  View Order Details
-                </Button>
+              {/* Orders Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-600">Order & Date</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-600">Retailer</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-600">Product</th>
+                      <th className="text-right py-3 px-2 text-sm font-medium text-gray-600">Amount</th>
+                      <th className="text-center py-3 px-2 text-sm font-medium text-gray-600">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentOrders.map((order) => (
+                      <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-2 text-sm">
+                          <div className="font-medium text-gray-900">Order {order.id}</div>
+                          <div className="text-gray-600 text-xs flex flex-row gap-2"> <div className="text-orange-600">Placed: </div> {order.date}</div>
+                        </td>
+                        <td className="py-3 px-2 text-sm">
+                          <div className="font-medium text-gray-900">{order.retailer}</div>
+                          <div className="text-gray-600 text-xs flex flex-row gap-2"> <div className="text-orange-600">PAN:</div> {order.panNo}</div>
+                        </td>
+                        <td className="py-3 px-2 text-sm">
+                          {order.productName.length > 30 ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="cursor-help">
+                                  <div className="font-medium text-gray-900">{truncateText(order.productName, 30)}</div>
+                                  <div className="text-gray-600 text-xs flex flex-row gap-2"><div className="text-orange-600">Qty:</div> {order.quantity}</div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">{order.productName}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <div>
+                              <div className="font-medium text-gray-900">{order.productName}</div>
+                              <div className="text-gray-600 text-xs flex flex-row gap-2"><div className="text-orange-600">Qty:</div> {order.quantity}</div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-sm text-right font-medium">{formatCurrency(order.amount)}</td>
+                        <td className="py-3 px-2 text-center">
+                          <Badge className="bg-green-100 text-green-700 border-green-200 font-medium text-xs">
+                            {order.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="mt-6 flex justify-center">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (currentPage > 1) setCurrentPage(currentPage - 1)
+                        }}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50 " : ""}
+                      />
+                    </PaginationItem>
+
+                    {/* First page */}
+                    {currentPage > 3 && (
+                      <>
+                        <PaginationItem>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setCurrentPage(1)
+                            }}
+                          >
+                            1
+                          </PaginationLink>
+                        </PaginationItem>
+                        {currentPage > 4 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                      </>
+                    )}
+
+                    {/* Current page and surrounding pages */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i
+                      if (pageNumber <= totalPages) {
+                        return (
+                          <PaginationItem key={pageNumber}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setCurrentPage(pageNumber)
+                              }}
+                              isActive={currentPage === pageNumber}
+                              
+                            >
+                              {pageNumber}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      }
+                      return null
+                    })}
+
+                    {/* Last page */}
+                    {currentPage < totalPages - 2 && (
+                      <>
+                        {currentPage < totalPages - 3 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        <PaginationItem>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setCurrentPage(totalPages)
+                            }}
+                          >
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      </>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                        }}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50 " : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             </CardContent>
           </Card>

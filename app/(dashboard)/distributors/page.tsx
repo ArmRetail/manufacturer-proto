@@ -1,13 +1,62 @@
+//@ts-nocheck
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Search, Phone, Mail, MapPin, Users, Package, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Search,
+  Phone,
+  Mail,
+  MapPin,
+  Users,
+  Package,
+  ChevronLeft,
+  ChevronRight,
+  BarChart3,
+  Plus,
+  CalendarIcon,
+  Percent,
+  Target,
+  Trash2,
+} from "lucide-react"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
+
+interface RebateTier {
+  id: string
+  minAmount: number
+  maxAmount: number
+  percentage: number
+}
+
+interface Rebate {
+  id: string
+  distributorId: string
+  name: string
+  startDate: Date
+  endDate: Date
+  brands: string[]
+  tiers: RebateTier[]
+  isActive: boolean
+  createdDate: Date
+}
 
 interface Distributor {
   id: string
@@ -21,6 +70,7 @@ interface Distributor {
   joinedDate: string
   totalRetailers: number
   brands: string[]
+  rebates?: Rebate[]
 }
 
 const mockDistributors: Distributor[] = [
@@ -36,6 +86,23 @@ const mockDistributors: Distributor[] = [
     joinedDate: "2023-01-15",
     totalRetailers: 45,
     brands: ["Wai Wai", "Khukuri", "Dairy Milk", "Coca Cola"],
+    rebates: [
+      {
+        id: "r1",
+        distributorId: "1",
+        name: "Q1 2024 Rebate",
+        startDate: new Date("2024-01-01"),
+        endDate: new Date("2024-03-31"),
+        brands: ["Wai Wai", "Khukuri"],
+        tiers: [
+          { id: "t1", minAmount: 10, maxAmount: 20, percentage: 3 },
+          { id: "t2", minAmount: 20, maxAmount: 30, percentage: 4 },
+          { id: "t3", minAmount: 30, maxAmount: 999, percentage: 5 },
+        ],
+        isActive: true,
+        createdDate: new Date("2023-12-15"),
+      },
+    ],
   },
   {
     id: "2",
@@ -128,63 +195,10 @@ const mockDistributors: Distributor[] = [
     totalRetailers: 19,
     brands: ["Wai Wai", "Dairy Milk", "Parle-G"],
   },
-  {
-    id: "9",
-    name: "Bagmati Valley Distributors",
-    email: "info@bagmativalley.com",
-    phone: "+977-1-5678901",
-    address: "Ring Road, Ward 14",
-    city: "Lalitpur",
-    district: "Lalitpur",
-    panNo: "901234567",
-    joinedDate: "2023-09-10",
-    totalRetailers: 35,
-    brands: ["Pepsi", "Maggi", "Britannia", "Parle-G"],
-  },
-  {
-    id: "10",
-    name: "Gandaki Region Supply",
-    email: "contact@gandakisupply.com",
-    phone: "+977-64-789012",
-    address: "Prithvi Highway, Ward 7",
-    city: "Gorkha",
-    district: "Gorkha",
-    panNo: "012345678",
-    joinedDate: "2023-10-05",
-    totalRetailers: 26,
-    brands: ["Wai Wai", "Khukuri", "Coca Cola"],
-  },
-  {
-    id: "11",
-    name: "Karnali Distribution Network",
-    email: "hello@karnalidist.com",
-    phone: "+977-87-890123",
-    address: "Airport Road, Ward 2",
-    city: "Nepalgunj",
-    district: "Banke",
-    panNo: "123450987",
-    joinedDate: "2023-11-12",
-    totalRetailers: 31,
-    brands: ["Dairy Milk", "Sprite", "Maggi", "Britannia"],
-  },
-  {
-    id: "12",
-    name: "Mahakali Zone Distributors",
-    email: "info@mahakalidist.com",
-    phone: "+977-99-901234",
-    address: "Mahendra Nagar, Ward 11",
-    city: "Bhimdatta",
-    district: "Kanchanpur",
-    panNo: "234561098",
-    joinedDate: "2023-12-01",
-    totalRetailers: 22,
-    brands: ["Wai Wai", "Pepsi", "Parle-G"],
-  },
 ]
 
 const allDistricts = Array.from(new Set(mockDistributors.map((d) => d.district))).sort()
 const allBrands = Array.from(new Set(mockDistributors.flatMap((d) => d.brands))).sort()
-
 const ITEMS_PER_PAGE = 8
 
 export default function DistributorPage() {
@@ -193,9 +207,11 @@ export default function DistributorPage() {
   const [selectedBrand, setSelectedBrand] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [filteredDistributors, setFilteredDistributors] = useState(mockDistributors)
+  const [distributors, setDistributors] = useState(mockDistributors)
+
 
   const applyFilters = () => {
-    let filtered = mockDistributors
+    let filtered = distributors
 
     // Search filter
     if (searchTerm) {
@@ -220,7 +236,7 @@ export default function DistributorPage() {
     }
 
     setFilteredDistributors(filtered)
-    setCurrentPage(1) // Reset to first page when filters change
+    setCurrentPage(1)
   }
 
   const handleSearch = (value: string) => {
@@ -237,11 +253,6 @@ export default function DistributorPage() {
     setSelectedBrand(value)
     applyFilters()
   }
-
-  // Apply filters whenever any filter changes
-  useState(() => {
-    applyFilters()
-  })
 
   // Pagination logic
   const totalPages = Math.ceil(filteredDistributors.length / ITEMS_PER_PAGE)
@@ -265,6 +276,12 @@ export default function DistributorPage() {
     }
   }
 
+
+
+  const getActiveRebatesCount = (distributor: Distributor) => {
+    return distributor.rebates?.filter((rebate) => rebate.isActive).length || 0
+  }
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
@@ -273,22 +290,22 @@ export default function DistributorPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">Distributors</h1>
-              <p className="text-slate-600 mt-1">Manage your distribution network across Nepal</p>
+              <p className="text-slate-600 mt-1">Manage your distribution network and rebate systems across Nepal</p>
             </div>
           </div>
 
           {/* Search and Filters */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <Card className="flex flex-wrap gap-3 items-end bg-white border border-gray-200 rounded-lg shadow-sm px-4 py-3 mb-2">
             <CardContent className="p-6">
-              <div className="flex  gap-4">
+              <div className="flex gap-4">
                 {/* Search Bar */}
-                <div className="relative flex-1 min-w-2/3">
+                <div className="relative flex-1 min-w-1/2">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                   <Input
                     placeholder="Search by name, city, district, email, or PAN..."
                     value={searchTerm}
                     onChange={(e) => handleSearch(e.target.value)}
-                    className="pl-10 w-full border-slate-200 focus:border-orange-500 focus:ring-orange-500"
+                    className="pl-10 min-w-full border-slate-200 focus:border-orange-500 focus:ring-orange-500"
                   />
                 </div>
 
@@ -327,7 +344,6 @@ export default function DistributorPage() {
 
           {/* Distributors Table */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -335,9 +351,10 @@ export default function DistributorPage() {
                     <tr>
                       <th className="text-left p-4 font-semibold text-slate-700">Distributor & Contact</th>
                       <th className="text-left p-4 font-semibold text-slate-700">Location</th>
-                      <th className="text-left p-4 font-semibold text-slate-700">Network</th>
-                      <th className="text-left p-4 font-semibold text-slate-700">Brands</th>
-                      <th className="text-left p-4 font-semibold text-slate-700">Joined</th>
+                 
+                      <th className="text-left p-4 font-semibold text-slate-700  bg-red-300">Brands</th>
+                      <th className="text-left p-4 font-semibold text-slate-700 ">Rebates</th>
+                   
                       <th className="text-left p-4 font-semibold text-slate-700">Actions</th>
                     </tr>
                   </thead>
@@ -353,7 +370,9 @@ export default function DistributorPage() {
                           <div className="space-y-2">
                             <div>
                               <div className="font-semibold text-slate-900">{distributor.name}</div>
-                              <div className="text-sm text-slate-500"> <span className="text-orange-600">PAN:</span>  {distributor.panNo}</div>
+                              <div className="text-sm text-slate-500">
+                                <span className="text-orange-600">PAN:</span> {distributor.panNo}
+                              </div>
                             </div>
                             <div className="space-y-1">
                               <div className="flex items-center space-x-2 text-sm">
@@ -378,15 +397,9 @@ export default function DistributorPage() {
                             </div>
                           </div>
                         </td>
+                     
                         <td className="p-4">
-                          <div className="flex items-center space-x-2">
-                            <Users className="h-4 w-4 text-orange-500" />
-                            <span className="font-semibold text-slate-900">{distributor.totalRetailers}</span>
-                            <span className="text-sm text-slate-500">retailers</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center space-x-2">
+                          <div className="flex  items-center space-x-2">
                             <Package className="h-4 w-4 text-orange-500" />
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -430,17 +443,19 @@ export default function DistributorPage() {
                           </div>
                         </td>
                         <td className="p-4">
-                          <div className="text-sm text-slate-600">
-                            {new Date(distributor.joinedDate).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
+                          <div className="flex items-center justify-center space-x-2">
+                            {/* <Percent className="h-4 w-4 text-green-500" /> */}
+                            <div className="text-sm flex ">
+                              <div className="font-semibold text-slate-900">
+                                {getActiveRebatesCount(distributor)} Active
+                              </div>
+
+                            </div>
                           </div>
                         </td>
-                        <td className="p-4">
-                   
                      
+                        <td className="p-4">
+                          <div className="flex flex-col gap-2">
                             <Button
                               variant="default"
                               size="sm"
@@ -448,9 +463,9 @@ export default function DistributorPage() {
                               onClick={() => (window.location.href = "distributors/analytics")}
                             >
                               <BarChart3 className="h-3 w-3 mr-1" />
-                              View Analytics
+                              Analytics
                             </Button>
-            
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -487,7 +502,6 @@ export default function DistributorPage() {
                       <ChevronLeft className="h-4 w-4" />
                       Previous
                     </Button>
-
                     <div className="flex space-x-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                         <Button
@@ -505,7 +519,6 @@ export default function DistributorPage() {
                         </Button>
                       ))}
                     </div>
-
                     <Button
                       variant="outline"
                       size="sm"
@@ -523,6 +536,9 @@ export default function DistributorPage() {
           </Card>
         </div>
       </div>
+
+
+     
     </TooltipProvider>
   )
 }

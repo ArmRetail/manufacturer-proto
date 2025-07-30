@@ -1,3 +1,4 @@
+//@ts-nocheck
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
@@ -14,18 +15,13 @@ import {
   AlertCircle,
   Clock,
   MapPin,
-  ChevronLeft,
-  ChevronRight,
-  ArrowLeft,
-  ArrowRight,
-  ZoomIn,
-  ZoomOut,
-  Mail,
+  Copy,
   Plus,
+  Mail,
   Search,
   ShoppingCart,
   AlertTriangle,
-  IdCard 
+  BadgeIcon as IdCard,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
@@ -34,6 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Mock order data (same as before)
 const mockOrderData = [
@@ -50,27 +47,25 @@ const mockOrderData = [
         orderId: "MFG-ORD-001",
         brandName: "Wai Wai Noodles",
         productName: "Wai Wai Noodles - Chicken Flavor 75g Pack (Carton of 48)",
-        productImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+        productImage: "/bowl-of-noodles.png",
         quantity: 100,
         unitPrice: 1200,
         totalPrice: 120000,
         status: "pending",
         paymentStatus: "unpaid",
-        orderDate: "2024-01-15",
-        expectedDelivery: "2024-01-25",
+        orderDate: "2024-07-15",
       },
       {
         orderId: "MFG-ORD-002",
         brandName: "Chau Chau Noodles",
         productName: "Chau Chau Noodles - Masala Flavor 70g Pack (Carton of 48)",
-        productImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+        productImage: "/bowl-of-noodles.png",
         quantity: 75,
         unitPrice: 1100,
         totalPrice: 82500,
         status: "processing",
         paymentStatus: "paid",
-        orderDate: "2024-01-14",
-        expectedDelivery: "2024-01-24",
+        orderDate: "2024-07-14",
       },
     ],
   },
@@ -87,30 +82,30 @@ const mockOrderData = [
         orderId: "MFG-ORD-003",
         brandName: "Wai Wai Noodles",
         productName: "Wai Wai Noodles - Vegetable Flavor 75g Pack (Carton of 48)",
-        productImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+        productImage: "/bowl-of-noodles.png",
         quantity: 60,
         unitPrice: 1200,
         totalPrice: 72000,
         status: "packaged",
         paymentStatus: "paid",
-        orderDate: "2024-01-12",
-        expectedDelivery: "2024-01-22",
+        orderDate: "2024-07-12",
       },
       {
         orderId: "MFG-ORD-004",
         brandName: "Chau Chau Noodles",
         productName: "Chau Chau Noodles - Chicken Flavor 70g Pack (Carton of 48)",
-        productImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+        productImage: "/bowl-of-noodles.png",
         quantity: 80,
         unitPrice: 1100,
         totalPrice: 88000,
         status: "shipped",
         paymentStatus: "paid",
-        orderDate: "2024-01-10",
-        expectedDelivery: "2024-01-20",
+        orderDate: "2024-07-10",
       },
     ],
   },
+  
+
   {
     distributorId: "DIST-003",
     distributorName: "Eastern Nepal Suppliers",
@@ -124,14 +119,13 @@ const mockOrderData = [
         orderId: "MFG-ORD-005",
         brandName: "Wai Wai Noodles",
         productName: "Wai Wai Noodles - Chicken Flavor 75g Pack (Carton of 48)",
-        productImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+        productImage: "/bowl-of-noodles.png",
         quantity: 150,
         unitPrice: 1200,
         totalPrice: 180000,
         status: "delivered",
         paymentStatus: "paid",
-        orderDate: "2024-01-08",
-        expectedDelivery: "2024-01-18",
+        orderDate: "2024-07-08",
       },
     ],
   },
@@ -148,32 +142,31 @@ const mockOrderData = [
         orderId: "MFG-ORD-006",
         brandName: "Chau Chau Noodles",
         productName: "Chau Chau Noodles - Masala Flavor 70g Pack (Carton of 48)",
-        productImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+        productImage: "/bowl-of-noodles.png",
         quantity: 90,
         unitPrice: 1100,
         totalPrice: 99000,
         status: "cancelled",
         paymentStatus: "unpaid",
-        orderDate: "2024-01-05",
-        expectedDelivery: "2024-01-15",
+        reason: "Customer requested cancellation due to delay.",
+        orderDate: "2024-07-05",
       },
       {
         orderId: "MFG-ORD-007",
         brandName: "Wai Wai Noodles",
         productName: "Wai Wai Noodles - Vegetable Flavor 75g Pack (Carton of 48)",
-        productImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+        productImage: "/bowl-of-noodles.png",
         quantity: 120,
         unitPrice: 1200,
         totalPrice: 144000,
         status: "failed",
         paymentStatus: "unpaid",
-        orderDate: "2024-01-16",
-        expectedDelivery: "2024-01-26",
+        reason: "Payment authorization failed by the bank.",
+        orderDate: "2024-07-16",
       },
     ],
   },
 ]
-
 const statusTabs = [
   { key: "all", label: "All", icon: Package },
   { key: "pending", label: "Pending", icon: Clock },
@@ -184,8 +177,6 @@ const statusTabs = [
   { key: "cancelled", label: "Cancelled", icon: XCircle },
   { key: "failed", label: "Failed", icon: AlertCircle },
 ]
-
-// Mock distributors for autocomplete
 const mockDistributors = mockOrderData.map((dist) => ({
   id: dist.distributorId,
   name: dist.distributorName,
@@ -195,8 +186,6 @@ const mockDistributors = mockOrderData.map((dist) => ({
   address: dist.address,
   panNo: dist.panNo,
 }))
-
-// Mock addresses for autocomplete
 const mockAddresses = [
   "Thamel, Kathmandu 44600, Bagmati Province",
   "Lakeside, Pokhara 33700, Gandaki Province",
@@ -205,7 +194,6 @@ const mockAddresses = [
   "New Road, Kathmandu 44600, Bagmati Province",
   "Mahendrapool, Pokhara 33700, Gandaki Province",
 ]
-
 const mockProducts = [
   {
     id: "PROD-001",
@@ -214,7 +202,7 @@ const mockProducts = [
     price: 1200,
     category: "Instant Noodles",
     stock: 150,
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+    image: "/bowl-of-noodles.png",
   },
   {
     id: "PROD-002",
@@ -223,7 +211,7 @@ const mockProducts = [
     price: 1100,
     category: "Instant Noodles",
     stock: 89,
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+    image: "/bowl-of-noodles.png",
   },
   {
     id: "PROD-003",
@@ -232,7 +220,7 @@ const mockProducts = [
     price: 1200,
     category: "Instant Noodles",
     stock: 75,
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+    image: "/bowl-of-noodles.png",
   },
   {
     id: "PROD-004",
@@ -241,7 +229,7 @@ const mockProducts = [
     price: 650,
     category: "Spices & Seasonings",
     stock: 45,
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+    image: "/pile-of-salt.png",
   },
   {
     id: "PROD-005",
@@ -250,21 +238,19 @@ const mockProducts = [
     price: 450,
     category: "Spices & Seasonings",
     stock: 120,
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=80&h=80&fit=crop",
+    image: "/assorted-spices.png",
   },
 ]
 
 export default function ManufacturerOrders() {
   const [activeTab, setActiveTab] = useState("all")
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const tableRef = useRef<HTMLTableElement>(null)
-  const [showScrollHint, setShowScrollHint] = useState(true)
-  const [isDesktop, setIsDesktop] = useState(false)
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
   const [isProductSelectionOpen, setIsProductSelectionOpen] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // FILTER STATE
   const [statusFilter, setStatusFilter] = useState("all")
+  const [brandFilter, setBrandFilter] = useState("all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState<string | null>(null)
   const [dateTo, setDateTo] = useState<string | null>(null)
@@ -278,7 +264,6 @@ export default function ManufacturerOrders() {
     ownerName: "",
     phone: "",
     email: "",
-    expectedDelivery: "",
     notes: "",
     products: [] as Array<{ id: string; name: string; brand: string; price: number; quantity: number }>,
   })
@@ -296,27 +281,45 @@ export default function ManufacturerOrders() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [selectedProducts, setSelectedProducts] = useState<Array<{ id: string; quantity: number }>>([])
 
-    // PAGINATION STATE
+  // PAGINATION STATE
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(5)
+  // STICKY TABS STATE
+  const tabsRef = useRef<HTMLDivElement>(null)
+  const [isTabsSticky, setIsTabsSticky] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  // Check if desktop size
   useEffect(() => {
-    const checkDesktop = () => {
-      setIsDesktop(window.innerWidth >= 1024)
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      if (tabsRef.current) {
+        const headerHeight = 64 // h-16
+        const { top } = tabsRef.current.getBoundingClientRect()
+        setIsTabsSticky(top <= headerHeight)
+      }
     }
-    checkDesktop()
-    window.addEventListener("resize", checkDesktop)
-    return () => window.removeEventListener("resize", checkDesktop)
+
+    container.addEventListener("scroll", handleScroll)
+    return () => container.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Flatten data for table rows
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
   const tableData = useMemo(() => {
     const flatData = []
     for (const distributor of mockOrderData) {
       for (const order of distributor.orders) {
+        const product = mockProducts.find((p) => p.name === order.productName)
         flatData.push({
           ...order,
+          reason: order.reason, // Add this line
+          productId: product ? product.id : "N/A",
           distributorId: distributor.distributorId,
           distributorName: distributor.distributorName,
           ownerName: distributor.ownerName,
@@ -330,11 +333,15 @@ export default function ManufacturerOrders() {
     return flatData
   }, [])
 
-  // Filter orders
+  const brands = useMemo(() => [...new Set(tableData.map((order) => order.brandName))], [tableData])
+
   const filteredData = useMemo(() => {
     let data = tableData
     if (activeTab !== "all") {
       data = data.filter((order) => order.status === activeTab)
+    }
+    if (brandFilter !== "all") {
+      data = data.filter((order) => order.brandName === brandFilter)
     }
     if (statusFilter !== "all") {
       data = data.filter((order) => order.status === statusFilter)
@@ -343,10 +350,10 @@ export default function ManufacturerOrders() {
       data = data.filter((order) => order.paymentStatus === paymentStatusFilter)
     }
     if (dateFrom) {
-      data = data.filter((order) => order.orderDate >= dateFrom)
+      data = data.filter((order) => new Date(order.orderDate) >= new Date(dateFrom))
     }
     if (dateTo) {
-      data = data.filter((order) => order.orderDate <= dateTo)
+      data = data.filter((order) => new Date(order.orderDate) <= new Date(dateTo))
     }
     if (search.trim()) {
       const s = search.trim().toLowerCase()
@@ -359,32 +366,22 @@ export default function ManufacturerOrders() {
       )
     }
     return data
-  }, [tableData, activeTab, statusFilter, paymentStatusFilter, dateFrom, dateTo, search])
-
-  // After the filteredData useMemo, add this new useMemo to group and sort data by distributor:
+  }, [tableData, activeTab, brandFilter, statusFilter, paymentStatusFilter, dateFrom, dateTo, search])
 
   const groupedFilteredData = useMemo(() => {
-    // Sort by distributor name first, then by order date
     const sortedData = [...filteredData].sort((a, b) => {
       if (a.distributorName !== b.distributorName) {
         return a.distributorName.localeCompare(b.distributorName)
       }
-      return new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime()
+      return new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
     })
-
-    // Mark first occurrence of each distributor
     const groupedData = sortedData.map((order, index) => {
       const isFirstForDistributor = index === 0 || sortedData[index - 1].distributorName !== order.distributorName
-      return {
-        ...order,
-        showDistributorInfo: isFirstForDistributor,
-      }
+      return { ...order, showDistributorInfo: isFirstForDistributor }
     })
-
     return groupedData
   }, [filteredData])
 
-   // Paginated data
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
@@ -394,8 +391,6 @@ export default function ManufacturerOrders() {
   const totalPages = Math.ceil(groupedFilteredData.length / itemsPerPage)
   const totalItems = groupedFilteredData.length
 
-
-  // Filter products for selection
   const filteredProducts = useMemo(() => {
     let products = mockProducts
     if (categoryFilter !== "all") {
@@ -408,10 +403,8 @@ export default function ManufacturerOrders() {
     return products
   }, [productSearch, categoryFilter])
 
-  // Handle distributor name input
   const handleDistributorNameChange = (value: string) => {
     setNewOrder({ ...newOrder, distributorName: value })
-
     if (value.trim()) {
       const suggestions = mockDistributors.filter((d) => d.name.toLowerCase().includes(value.toLowerCase()))
       setDistributorSuggestions(suggestions)
@@ -419,17 +412,13 @@ export default function ManufacturerOrders() {
     } else {
       setShowDistributorSuggestions(false)
     }
-
-    // Check if user modified auto-filled data
     if (selectedDistributor && value !== selectedDistributor.name) {
       setHasModifiedAutoFilledData(true)
     }
   }
 
-  // Handle address input
   const handleAddressChange = (value: string) => {
     setNewOrder({ ...newOrder, address: value })
-
     if (value.trim()) {
       const suggestions = mockAddresses.filter((addr) => addr.toLowerCase().includes(value.toLowerCase()))
       setAddressSuggestions(suggestions)
@@ -437,14 +426,11 @@ export default function ManufacturerOrders() {
     } else {
       setShowAddressSuggestions(false)
     }
-
-    // Check if user modified auto-filled data
     if (selectedDistributor && value !== selectedDistributor.address) {
       setHasModifiedAutoFilledData(true)
     }
   }
 
-  // Select distributor from suggestions
   const selectDistributor = (distributor: (typeof mockDistributors)[0]) => {
     setSelectedDistributor(distributor)
     setNewOrder({
@@ -460,11 +446,8 @@ export default function ManufacturerOrders() {
     setHasModifiedAutoFilledData(false)
   }
 
-  // Handle other field changes
   const handleFieldChange = (field: string, value: string) => {
     setNewOrder({ ...newOrder, [field]: value })
-
-    // Check if user modified auto-filled data
     if (selectedDistributor) {
       const originalValue = selectedDistributor[field as keyof typeof selectedDistributor]
       if (originalValue && value !== originalValue) {
@@ -473,7 +456,6 @@ export default function ManufacturerOrders() {
     }
   }
 
-  // Handle product selection
   const handleProductToggle = (productId: string) => {
     setSelectedProducts((prev) => {
       const existing = prev.find((p) => p.id === productId)
@@ -489,7 +471,6 @@ export default function ManufacturerOrders() {
     setSelectedProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, quantity } : p)))
   }
 
-  // Confirm product selection
   const confirmProductSelection = () => {
     const products = selectedProducts.map((sp) => {
       const product = mockProducts.find((p) => p.id === sp.id)!
@@ -505,53 +486,7 @@ export default function ManufacturerOrders() {
     setIsProductSelectionOpen(false)
   }
 
-  // Calculate total
-  const orderTotal = newOrder.products.reduce((sum, product) => sum + product.price * product.quantity, 0) 
-
-  useEffect(() => {
-    if (isDesktop) {
-      const timer = setTimeout(() => setShowScrollHint(false), 8000)
-      return () => clearTimeout(timer)
-    } else {
-      setShowScrollHint(false)
-    }
-  }, [isDesktop])
-
-  // Status badges (same as before)
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
-      processing: { color: "bg-blue-100 text-blue-800 border-blue-200", icon: Package },
-      packaged: { color: "bg-purple-100 text-purple-800 border-purple-200", icon: Package },
-      shipped: { color: "bg-orange-100 text-orange-800 border-orange-200", icon: Truck },
-      delivered: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
-      cancelled: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
-      failed: { color: "bg-red-100 text-red-800 border-red-200", icon: AlertCircle },
-    }
-    const config = statusConfig[status as keyof typeof statusConfig]
-    const IconComponent = config.icon
-    return (
-      <Badge className={`${config.color} border font-medium px-2 py-1 text-xs flex items-center gap-1`}>
-        <IconComponent className="h-3 w-3" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    )
-  }
-
-  const getPaymentStatusBadge = (paymentStatus: string) => {
-    const statusConfig = {
-      paid: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
-      unpaid: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
-    }
-    const config = statusConfig[paymentStatus as keyof typeof statusConfig]
-    const IconComponent = config.icon
-    return (
-      <Badge className={`${config.color} border font-medium px-2 py-1 text-xs flex items-center gap-1`}>
-        <IconComponent className="h-3 w-3" />
-        {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
-      </Badge>
-    )
-  }
+  const orderTotal = newOrder.products.reduce((sum, product) => sum + product.price * product.quantity, 0)
 
   const formatCurrency = (amount: number) => {
     return `रू ${amount.toLocaleString()}`
@@ -570,10 +505,8 @@ export default function ManufacturerOrders() {
 
   const handleCreateOrder = () => {
     if (hasModifiedAutoFilledData) {
-      return // Don't create order if auto-filled data was modified
+      return
     }
-
-    // TODO: Implement order creation logic
     console.log("Creating order:", newOrder)
     setIsCreateOrderOpen(false)
     resetOrderForm()
@@ -587,7 +520,6 @@ export default function ManufacturerOrders() {
       ownerName: "",
       phone: "",
       email: "",
-      expectedDelivery: "",
       notes: "",
       products: [],
     })
@@ -598,9 +530,60 @@ export default function ManufacturerOrders() {
 
   const categories = [...new Set(mockProducts.map((p) => p.category))]
 
+  const getStatusBadge = (status: string, reason?: string) => {
+    const statusConfig = {
+      pending: { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
+      processing: { color: "bg-blue-100 text-blue-800 border-blue-200", icon: Package },
+      packaged: { color: "bg-purple-100 text-purple-800 border-purple-200", icon: Package },
+      shipped: { color: "bg-orange-100 text-orange-800 border-orange-200", icon: Truck },
+      delivered: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
+      cancelled: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
+      failed: { color: "bg-red-100 text-red-800 border-red-200", icon: AlertCircle },
+    }
+    const config = statusConfig[status as keyof typeof statusConfig]
+    const IconComponent = config.icon
+
+    const badgeComponent = (
+      <Badge className={`${config.color} border font-medium px-2 py-1 text-xs inline-flex items-center gap-1 w-fit`}>
+        <IconComponent className="h-3 w-3" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    )
+
+    if ((status === "cancelled" || status === "failed") && reason) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>{badgeComponent}</TooltipTrigger>
+            <TooltipContent>
+              <p>{reason}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    }
+
+    return badgeComponent
+  }
+
+  const getPaymentStatusBadge = (paymentStatus: string) => {
+    const statusConfig = {
+      paid: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
+      unpaid: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
+    }
+    const config = statusConfig[paymentStatus as keyof typeof statusConfig]
+    const IconComponent = config.icon
+    return (
+      <Badge className={`${config.color} border font-medium px-2 py-1 text-xs inline-flex items-center gap-1 w-fit`}>
+        <IconComponent className="h-3 w-3" />
+        {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
+      </Badge>
+    )
+  }
+
   return (
     <div className="flex-1 bg-gray-50 w-full min-w-0 overflow-hidden">
-      <div className="h-full overflow-y-auto">
+      <div ref={scrollContainerRef} className="h-full overflow-y-auto">
         <div className="p-6 space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">
@@ -620,7 +603,6 @@ export default function ManufacturerOrders() {
                   <DialogTitle>Create New Order</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6">
-                  {/* Warning Message */}
                   {hasModifiedAutoFilledData && (
                     <Alert className="border-red-200 bg-red-50">
                       <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -630,8 +612,6 @@ export default function ManufacturerOrders() {
                       </AlertDescription>
                     </Alert>
                   )}
-
-                  {/* Distributor Name with Autocomplete */}
                   <div className="relative">
                     <Label htmlFor="distributor-name">Distributor Name *</Label>
                     <Input
@@ -658,8 +638,6 @@ export default function ManufacturerOrders() {
                       </div>
                     )}
                   </div>
-
-                  {/* PAN Number */}
                   <div>
                     <Label htmlFor="pan-no">PAN Number *</Label>
                     <Input
@@ -670,8 +648,6 @@ export default function ManufacturerOrders() {
                       className="mt-1"
                     />
                   </div>
-
-                  {/* Address with Autocomplete */}
                   <div className="relative">
                     <Label htmlFor="address">Address *</Label>
                     <Input
@@ -698,8 +674,6 @@ export default function ManufacturerOrders() {
                       </div>
                     )}
                   </div>
-
-                  {/* Owner Name */}
                   <div>
                     <Label htmlFor="owner-name">Owner Name *</Label>
                     <Input
@@ -710,8 +684,6 @@ export default function ManufacturerOrders() {
                       className="mt-1"
                     />
                   </div>
-
-                  {/* Contact Info */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="phone">Phone Number *</Label>
@@ -735,8 +707,6 @@ export default function ManufacturerOrders() {
                       />
                     </div>
                   </div>
-
-                  {/* Order List */}
                   <div>
                     <Label>Order List *</Label>
                     <Button
@@ -750,8 +720,6 @@ export default function ManufacturerOrders() {
                         ? `${newOrder.products.length} products selected`
                         : "Click to select products"}
                     </Button>
-
-                    {/* Selected Products Preview */}
                     {newOrder.products.length > 0 && (
                       <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
                         {newOrder.products.map((product) => (
@@ -769,20 +737,6 @@ export default function ManufacturerOrders() {
                       </div>
                     )}
                   </div>
-
-                  {/* Expected Delivery */}
-                  <div>
-                    <Label htmlFor="delivery">Expected Delivery *</Label>
-                    <Input
-                      id="delivery"
-                      type="date"
-                      value={newOrder.expectedDelivery}
-                      onChange={(e) => setNewOrder({ ...newOrder, expectedDelivery: e.target.value })}
-                      className="mt-1"
-                    />
-                  </div>
-
-                  {/* Notes */}
                   <div>
                     <Label htmlFor="notes">Notes (Optional)</Label>
                     <Textarea
@@ -793,8 +747,6 @@ export default function ManufacturerOrders() {
                       className="mt-1"
                     />
                   </div>
-
-                  {/* Order Total */}
                   {orderTotal > 0 && (
                     <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
                       <div className="text-lg font-semibold text-orange-800">
@@ -802,8 +754,6 @@ export default function ManufacturerOrders() {
                       </div>
                     </div>
                   )}
-
-                  {/* Action Buttons */}
                   <div className="flex gap-3 pt-4">
                     <Button variant="outline" onClick={() => setIsCreateOrderOpen(false)} className="flex-1">
                       Cancel
@@ -818,7 +768,6 @@ export default function ManufacturerOrders() {
                         !newOrder.address ||
                         !newOrder.ownerName ||
                         !newOrder.phone ||
-                        !newOrder.expectedDelivery ||
                         newOrder.products.length === 0
                       }
                     >
@@ -836,9 +785,7 @@ export default function ManufacturerOrders() {
               <DialogHeader>
                 <DialogTitle>Select Products</DialogTitle>
               </DialogHeader>
-
               <div className="space-y-4">
-                {/* Search and Filter */}
                 <div className="flex gap-4">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -863,18 +810,17 @@ export default function ManufacturerOrders() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Product List */}
                 <div className="max-h-96 overflow-y-auto border rounded-lg">
                   <div className="grid gap-2 p-4">
                     {filteredProducts.map((product) => {
                       const isSelected = selectedProducts.some((p) => p.id === product.id)
                       const selectedProduct = selectedProducts.find((p) => p.id === product.id)
-
                       return (
                         <div
                           key={product.id}
-                          className={`p-3 border rounded-lg ${isSelected ? "border-orange-300 bg-orange-50" : "border-gray-200"}`}
+                          className={`p-3 border rounded-lg ${
+                            isSelected ? "border-orange-300 bg-orange-50" : "border-gray-200"
+                          }`}
                         >
                           <div className="flex items-center gap-3">
                             <Checkbox
@@ -915,8 +861,6 @@ export default function ManufacturerOrders() {
                     })}
                   </div>
                 </div>
-
-                {/* Selected Summary */}
                 {selectedProducts.length > 0 && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <div className="text-sm font-medium text-gray-700">
@@ -924,8 +868,6 @@ export default function ManufacturerOrders() {
                     </div>
                   </div>
                 )}
-
-                {/* Action Buttons */}
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setIsProductSelectionOpen(false)} className="flex-1">
                     Cancel
@@ -944,6 +886,24 @@ export default function ManufacturerOrders() {
 
           {/* Filter Bar */}
           <div className="flex flex-wrap gap-3 items-end bg-white border border-gray-200 rounded-lg shadow-sm px-4 py-3 mb-2">
+            <div className="w-40">
+              <Label className="mb-1" htmlFor="brand-select">
+                Brand
+              </Label>
+              <Select value={brandFilter} onValueChange={setBrandFilter}>
+                <SelectTrigger className="w-full h-9" id="brand-select">
+                  <SelectValue placeholder="All Brands" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Brands</SelectItem>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="w-40">
               <Label className="mb-1" htmlFor="status-select">
                 Status
@@ -1021,6 +981,7 @@ export default function ManufacturerOrders() {
                 variant="outline"
                 className="h-9 mt-1 bg-transparent"
                 onClick={() => {
+                  setBrandFilter("all")
                   setStatusFilter("all")
                   setPaymentStatusFilter("all")
                   setDateFrom(null)
@@ -1034,7 +995,12 @@ export default function ManufacturerOrders() {
           </div>
 
           {/* Status Tabs */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div
+            ref={tabsRef}
+            className={`bg-white rounded-lg border border-gray-200 shadow-sm transition-all ${
+              isTabsSticky ? "sticky top-16 z-20" : ""
+            }`}
+          >
             <div className="flex overflow-x-auto">
               {statusTabs.map((tab) => {
                 const IconComponent = tab.icon
@@ -1053,8 +1019,10 @@ export default function ManufacturerOrders() {
                     <IconComponent className="h-4 w-4" />
                     {tab.label}
                     <Badge
-                    variant='destructive'
-                      className={`ml-1 ${tab.key === 'all' ? 'hidden': 'block'}  text-[12px] font-extrabold text-white !rounded-full py-[-5px] px-[6px]`}
+                      variant="destructive"
+                      className={`ml-1 ${
+                        tab.key === "all" ? "hidden" : "block"
+                      }  text-[12px] font-extrabold text-white !rounded-full py-[-5px] px-[6px]`}
                     >
                       {count}
                     </Badge>
@@ -1064,36 +1032,8 @@ export default function ManufacturerOrders() {
             </div>
           </div>
 
-          {/* Navigation Instructions */}
-          {showScrollHint && isDesktop && filteredData.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-blue-700">
-                  <ArrowLeft className="h-4 w-4" />
-                  <ArrowRight className="h-4 w-4" />
-                  <ZoomIn className="h-4 w-4" />
-                  <ZoomOut className="h-4 w-4" />
-                </div>
-                <div className="text-sm text-blue-700">
-                  <strong>Desktop Navigation:</strong> Use{" "}
-                  <kbd className="px-2 py-1 bg-blue-100 rounded text-xs font-mono">Shift + ←</kbd> /{" "}
-                  <kbd className="px-2 py-1 bg-blue-100 rounded text-xs font-mono">Shift + →</kbd> to scroll
-                  horizontally, or use the control buttons.
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowScrollHint(false)}
-                  className="ml-auto text-blue-600 hover:text-blue-700"
-                >
-                  ×
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Orders Table */}
-          {groupedFilteredData.length === 0 ? (
+          {paginatedData.length === 0 ? (
             <Card className="p-12 text-center">
               <div className="flex flex-col items-center gap-4">
                 <div className="p-4 bg-gray-100 rounded-full">
@@ -1103,7 +1043,7 @@ export default function ManufacturerOrders() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders found</h3>
                   <p className="text-gray-600">
                     {activeTab === "all"
-                      ? "No orders have been placed yet"
+                      ? "No orders match your current filters."
                       : `No orders with status "${activeTab}" found`}
                   </p>
                 </div>
@@ -1111,51 +1051,58 @@ export default function ManufacturerOrders() {
             </Card>
           ) : (
             <Card className="shadow-sm border-gray-200 bg-white overflow-hidden relative">
-
-           
-
-              <div ref={scrollContainerRef} className="overflow-x-auto">
-                <table ref={tableRef} className="w-full min-w-[1000px] transition-transform duration-200">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1100px]">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-80 border-r border-gray-200">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-[320px] border-r">
                         Distributor Info
                       </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-[420px] border-r border-gray-200">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-[250px] border-r">
                         Product Details
                       </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-40 border-r border-gray-200">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-[180px] border-r">
                         Order ID
                       </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-32 border-r border-gray-200">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-32 border-r border-gray-200">
-                        Payment
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-[160px] border-r">
+                        Status & Payment
                       </th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 w-32">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {groupedFilteredData.map((order) => (
+                    {paginatedData.map((order) => (
                       <tr key={order.orderId} className="hover:bg-gray-50">
-                        {/* Distributor Info */}
-                        <td className="px-6 py-4 align-top border-r border-gray-200">
+                        <td className="px-6 py-4 align-top border-r">
                           {order.showDistributorInfo ? (
-                            <div>
-                              <div className="text-sm font-semibold text-gray-900 mb-1">{order.distributorName}</div>
-                              <div className="text-xs text-gray-600 mb-1">
-                                <span className="font-medium text-orange-600">Owner:</span> {order.ownerName}
+                            <div className="space-y-1.5">
+                              <div className="text-sm font-semibold text-gray-900">{order.distributorName}</div>
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <span className="font-medium text-gray-800 w-20">Bundler ID:</span>
+                                <span className="font-mono text-orange-600">{order.distributorId}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  onClick={() => copyToClipboard(order.distributorId, `dist-${order.orderId}`)}
+                                >
+                                  <span className="sr-only">Copy Bundler ID</span>
+                                  {copiedId === `dist-${order.orderId}` ? (
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                </Button>
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-gray-600 mb-1">
+                              <div className="flex items-center gap-1 text-xs text-gray-600">
                                 <Phone className="h-3 w-3 text-orange-600" />
                                 {order.phone}
                               </div>
-                               <div className="flex items-center gap-1 text-xs text-gray-600 mb-1">
+                              <div className="flex items-center gap-1 text-xs text-gray-600">
                                 <IdCard className="h-3 w-3 text-orange-600" />
                                 {order.panNo}
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-gray-600 mb-1">
+                              <div className="flex items-center gap-1 text-xs text-gray-600">
                                 <Mail className="h-3 w-3 text-orange-600" />
                                 {order.email}
                               </div>
@@ -1165,28 +1112,60 @@ export default function ManufacturerOrders() {
                               </div>
                             </div>
                           ) : (
-                            <div className="h-4"></div> // Empty space to maintain row height
+                            <div className="h-4"></div>
                           )}
                         </td>
-
-                        {/* Product Details */}
-                        <td className="px-6 py-4 border-r border-gray-200">
+                        <td className="px-6 py-4 border-r">
                           <div className="flex items-center gap-3">
                             <img
                               src={order.productImage || "/placeholder.svg"}
                               alt={order.productName}
-                              className="w-12 h-12 rounded object-cover bg-gray-100 flex-shrink-0"
+                              className="w-10 h-10 rounded object-cover bg-gray-100 flex-shrink-0"
                             />
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="text-xs font-medium text-orange-600 mb-1">{order.brandName}</div>
-                              <div className="text-sm font-medium text-gray-900 leading-tight">{order.productName}</div>
+                              <TooltipProvider delayDuration={300}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="text-sm font-medium text-gray-900 leading-tight cursor-default">
+                                      <div className="truncate min-w-[15ch]">{order.productName.slice(0, 25)}</div>
+                                      <div className="truncate min-w-[15ch]">
+                                        {order.productName.slice(25, 50)}
+                                        {order.productName.length > 30 ? "..." : ""}
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{order.productName}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
+                                <span className="font-medium text-gray-800">SKU:</span>
+                                <span className="font-mono text-orange-600">{order.productId}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4"
+                                  onClick={() => copyToClipboard(order.productId, `sku-${order.orderId}`)}
+                                >
+                                  <span className="sr-only">Copy SKU</span>
+                                  {copiedId === `sku-${order.orderId}` ? (
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
                               <div className="flex flex-wrap gap-4 mt-1 text-xs text-gray-700">
                                 <span>
                                   Qty: <span className="font-semibold text-orange-600">{order.quantity}</span>
                                 </span>
                                 <span>
                                   Unit:{" "}
-                                  <span className="font-semibold text-orange-600">{formatCurrency(order.unitPrice)}</span>
+                                  <span className="font-semibold text-orange-600">
+                                    {formatCurrency(order.unitPrice)}
+                                  </span>
                                 </span>
                                 <span>
                                   Total:{" "}
@@ -1198,33 +1177,43 @@ export default function ManufacturerOrders() {
                             </div>
                           </div>
                         </td>
-
-                        {/* Order ID */}
-                        <td className="px-6 py-4 border-r border-gray-200">
-                          <div className="text-sm font-medium text-gray-900">{order.orderId}</div>
-                          <div className="text-xs text-gray-600 mt-1">
-                           <span className="text-orange-600">CretedAt:</span>  {new Date(order.expectedDelivery).toLocaleDateString()}
+                        <td className="px-6 py-4 border-r">
+                          <div className="flex items-center gap-1">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{order.orderId}</div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                <span className="text-orange-600">On:</span>{" "}
+                                {new Date(order.orderDate).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => copyToClipboard(order.orderId, `order-${order.orderId}`)}
+                            >
+                              <span className="sr-only">Copy Order ID</span>
+                              {copiedId === `order-${order.orderId}` ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </Button>
                           </div>
                         </td>
-
-                        {/* Status */}
-                        <td className="px-6 py-4 border-r border-gray-200">{getStatusBadge(order.status)}</td>
-
-                        {/* Payment Status */}
-                        <td className="px-6 py-4 border-r border-gray-200">
-                          {getPaymentStatusBadge(order.paymentStatus)}
+                        <td className="px-6 py-4 border-r">
+                          <div className="space-y-2">
+                            {getStatusBadge(order.status, order.reason)}
+                            {getPaymentStatusBadge(order.paymentStatus)}
+                          </div>
                         </td>
-
-                        {/* Action */}
                         <td className="px-6 py-4">
                           {order.status === "pending" ? (
-                            <div className="flex gap-2">
+                            <div className="flex flex-col gap-2">
                               <Button
                                 size="sm"
                                 className="bg-green-500 hover:bg-green-600 text-white text-xs h-8 px-3"
-                                onClick={() => {
-                                  /* TODO: handle confirm */
-                                }}
+                                onClick={() => {}}
                               >
                                 Confirm
                               </Button>
@@ -1232,9 +1221,7 @@ export default function ManufacturerOrders() {
                                 size="sm"
                                 variant="outline"
                                 className="border-red-500 text-red-600 hover:bg-red-50 h-8 px-3 text-xs bg-transparent"
-                                onClick={() => {
-                                  /* TODO: handle reject */
-                                }}
+                                onClick={() => {}}
                               >
                                 Reject
                               </Button>
@@ -1255,39 +1242,24 @@ export default function ManufacturerOrders() {
                   </tbody>
                 </table>
               </div>
-                            {/* Pagination Controls */}
-              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-gray-700">
-                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)}{" "}
-                    of {totalItems} orders
-                  </div>
-                
-                  
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-between px-6 py-3 border-t bg-white">
+                <div className="text-sm text-gray-700">
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)}{" "}
+                  of {totalItems} orders
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    className="h-8 px-2"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <ChevronLeft className="h-4 w-4 -ml-1" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="h-8 px-2"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-
+                {totalPages > 1 && (
                   <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="h-8 px-3"
+                    >
+                      Previous
+                    </Button>
+
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       let pageNum
                       if (totalPages <= 5) {
@@ -1316,28 +1288,18 @@ export default function ManufacturerOrders() {
                         </Button>
                       )
                     })}
-                  </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="h-8 px-2"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    className="h-8 px-2"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                    <ChevronRight className="h-4 w-4 -ml-1" />
-                  </Button>
-                </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="h-8 px-3"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
               </div>
             </Card>
           )}

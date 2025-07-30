@@ -416,7 +416,28 @@ export default function ManufacturerBrands() {
                         </div>
                       )}
                     </div>
-
+<div className="space-y-2">
+  <Label>Brand Thumbnail *</Label>
+     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                          <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600 mb-2">Upload brand Thumbnail</p>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            // onChange={handleImageUpload}
+                            className="hidden"
+                            id="brand-image"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => document.getElementById("brand-image")?.click()}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
+                          >
+                            Choose File
+                          </Button>
+                        </div>
+</div>
                     <div className="space-y-2">
                       <Label>Brand Documents for Authentication *</Label>
                       <div className="border-2 border-dashed border-orange-300 rounded-lg p-4 text-center bg-orange-50/30">
